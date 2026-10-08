@@ -1,0 +1,1883 @@
+<!DOCTYPE html>
+<html lang="vi" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AlgoTrajectory Visualizer Pro - Liquid Glass & Vật Lý Thuật Toán</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        cyber: {
+                            bg: '#070a12',
+                            card: 'rgba(15, 23, 42, 0.65)',
+                            border: 'rgba(255, 255, 255, 0.12)',
+                            neonBlue: '#00f0ff',
+                            neonPink: '#ff007f',
+                            neonYellow: '#ffea00',
+                            neonGreen: '#00ff88',
+                            neonPurple: '#a855f7'
+                        }
+                    },
+                    fontFamily: {
+                        mono: ['Fira Code', 'JetBrains Mono', 'monospace'],
+                        sans: ['Inter', 'sans-serif']
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- FontAwesome Icons CDN -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        /* Custom scrollbars */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: rgba(15, 23, 42, 0.6);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(0, 240, 255, 0.4);
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(0, 240, 255, 0.7);
+        }
+
+        /* Ultra Liquid Glassmorphism Effects */
+        .liquid-glass {
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0.02));
+            backdrop-filter: blur(20px) saturate(190%);
+            -webkit-backdrop-filter: blur(20px) saturate(190%);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4), inset 0 1px 1px 0 rgba(255, 255, 255, 0.2);
+        }
+        .light .liquid-glass {
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.85), rgba(255, 255, 255, 0.6));
+            backdrop-filter: blur(20px) saturate(190%);
+            -webkit-backdrop-filter: blur(20px) saturate(190%);
+            border: 1px solid rgba(255, 255, 255, 0.6);
+            box-shadow: 0 15px 35px rgba(31, 38, 135, 0.1), inset 0 1px 1px 0 rgba(255, 255, 255, 0.9);
+        }
+
+        .liquid-button {
+            transition: all 0.3s cubic-bezier(0.25, 1, 0.5, 1);
+            position: relative;
+            overflow: hidden;
+        }
+        .liquid-button::before {
+            content: '';
+            position: absolute;
+            top: 0; left: -100%; width: 100%; height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.25), transparent);
+            transition: left 0.6s ease;
+        }
+        .liquid-button:hover::before {
+            left: 100%;
+        }
+
+        /* Fluid Node Animations */
+        .array-node {
+            transition: transform 0.45s cubic-bezier(0.34, 1.56, 0.64, 1), background-color 0.3s, border-color 0.3s, box-shadow 0.3s, width 0.3s, height 0.3s;
+            will-change: transform, width, height;
+        }
+
+        .array-node.lifting {
+            z-index: 50 !important;
+            filter: drop-shadow(0 15px 25px rgba(0, 240, 255, 0.4));
+        }
+
+        /* Ghost Gap Slot */
+        .ghost-slot {
+            border: 2px dashed rgba(255, 255, 255, 0.2);
+            background: rgba(255, 255, 255, 0.02);
+            border-radius: 0.75rem;
+            transition: width 0.3s ease;
+        }
+        .light .ghost-slot {
+            border: 2px dashed rgba(0, 0, 0, 0.2);
+            background: rgba(0, 0, 0, 0.02);
+        }
+
+        /* Ripple Effect for Landing Drop */
+        @keyframes liquid-ripple {
+            0% {
+                box-shadow: 0 0 0 0 rgba(0, 240, 255, 0.9);
+            }
+            100% {
+                box-shadow: 0 0 0 25px rgba(0, 240, 255, 0);
+            }
+        }
+        .drop-ripple {
+            animation: liquid-ripple 0.7s cubic-bezier(0, 0, 0.2, 1);
+        }
+
+        /* SVG Vector overlay canvas */
+        #svg-layer {
+            pointer-events: none;
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 40;
+        }
+
+        .path-arrow {
+            stroke-dasharray: 6;
+            animation: dash 1s linear infinite;
+        }
+        @keyframes dash {
+            to {
+                stroke-dashoffset: -24;
+            }
+        }
+
+        /* Code Line Formatting & Highlighting - Preserving Indentation */
+        .code-line {
+            transition: background-color 0.2s ease, border-color 0.2s ease;
+            border-left: 3px solid transparent;
+        }
+        .code-line .code-text {
+            white-space: pre !important;
+            font-family: 'Fira Code', 'JetBrains Mono', monospace !important;
+        }
+        .code-line.active-line {
+            background-color: rgba(0, 240, 255, 0.15);
+            border-left-color: #00f0ff;
+            font-weight: 600;
+        }
+        .light .code-line.active-line {
+            background-color: rgba(2, 132, 199, 0.15);
+            border-left-color: #0284c7;
+        }
+
+        /* Dynamic Glow Effects */
+        .glow-neon-blue {
+            box-shadow: 0 0 20px rgba(0, 240, 255, 0.5), inset 0 0 10px rgba(0, 240, 255, 0.3);
+        }
+        .glow-neon-pink {
+            box-shadow: 0 0 20px rgba(255, 0, 127, 0.6), inset 0 0 10px rgba(255, 0, 127, 0.4);
+        }
+        .glow-neon-yellow {
+            box-shadow: 0 0 20px rgba(255, 234, 0, 0.6);
+        }
+        .glow-neon-green {
+            box-shadow: 0 0 20px rgba(0, 255, 136, 0.6);
+        }
+    </style>
+</head>
+<body class="bg-[#070a12] text-slate-100 font-sans min-h-screen flex flex-col transition-colors duration-300 light:bg-slate-100 light:text-slate-800">
+
+    <!-- Navigation Header -->
+    <header class="liquid-glass sticky top-0 z-50 px-5 py-3.5 border-b border-white/10">
+        <div class="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-4">
+            <!-- Brand / Logo -->
+            <div class="flex items-center gap-3">
+                <div class="w-11 h-11 rounded-2xl bg-gradient-to-br from-cyan-400 via-blue-600 to-pink-500 flex items-center justify-center shadow-lg shadow-cyan-500/30">
+                    <i class="fa-solid fa-route text-2xl text-white"></i>
+                </div>
+                <div>
+                    <h1 class="text-xl font-extrabold bg-gradient-to-r from-cyan-400 via-blue-400 to-pink-500 bg-clip-text text-transparent">
+                        AlgoTrajectory <span class="text-xs px-2.5 py-0.5 rounded-full bg-cyan-500/10 text-cyan-400 border border-cyan-500/30 font-mono">Liquid Glass v3.0</span>
+                    </h1>
+                    <p class="text-xs text-slate-400 light:text-slate-600">Mô Phỏng Thuật Toán & Quỹ Đạo Chuyển Động Động Học</p>
+                </div>
+            </div>
+
+            <!-- Algorithm, Sort Order & Language Selectors -->
+            <div class="flex items-center gap-3 flex-wrap">
+                <!-- Algorithm Select -->
+                <div class="flex items-center gap-2 bg-slate-900/80 light:bg-white/80 p-1.5 rounded-2xl border border-white/10 light:border-slate-300 shadow-inner">
+                    <span class="text-xs font-semibold text-slate-400 px-2"><i class="fa-solid fa-code-branch text-cyan-400 me-1"></i> Thuật toán:</span>
+                    <select id="algo-select" class="bg-transparent text-xs font-bold text-cyan-400 focus:outline-none cursor-pointer pr-2">
+                        <optgroup label="Thuật toán Sắp xếp">
+                            <option value="bubbleSort">Sắp xếp Nổi bọt (Bubble Sort)</option>
+                            <option value="selectionSort">Sắp xếp Chọn (Selection Sort)</option>
+                            <option value="insertionSort" selected>Sắp xếp Chèn (Insertion Sort)</option>
+                            <option value="quickSort">Sắp xếp Nhanh (Quick Sort)</option>
+                            <option value="mergeSort">Sắp xếp Trộn (Merge Sort)</option>
+                            <option value="heapSort">Sắp xếp Vun đống (Heap Sort)</option>
+                        </optgroup>
+                        <optgroup label="Thuật toán Tìm kiếm">
+                            <option value="linearSearch">Tìm kiếm Tuyến tính (Linear Search)</option>
+                            <option value="binarySearch">Tìm kiếm Nhị phân (Binary Search)</option>
+                        </optgroup>
+                    </select>
+                </div>
+
+                <!-- Sort Direction Order Select (Ascending / Descending) -->
+                <div id="sort-order-box" class="flex items-center gap-2 bg-slate-900/80 light:bg-white/80 p-1.5 rounded-2xl border border-white/10 light:border-slate-300">
+                    <span class="text-xs font-semibold text-slate-400 px-1"><i class="fa-solid fa-sort text-pink-400 me-1"></i> Thứ tự:</span>
+                    <select id="sort-order-select" class="bg-transparent text-xs font-bold text-pink-400 focus:outline-none cursor-pointer pr-2">
+                        <option value="asc" selected>Tăng dần (A → Z)</option>
+                        <option value="desc">Giảm dần (Z → A)</option>
+                    </select>
+                </div>
+
+                <!-- Code Language Selector -->
+                <div class="flex items-center gap-1 bg-slate-900/80 light:bg-white/80 p-1 rounded-2xl border border-white/10 light:border-slate-300">
+                    <button data-lang="javascript" class="lang-btn text-xs font-mono px-3 py-1.5 rounded-xl font-bold transition-all bg-cyan-500 text-slate-950 shadow">JS</button>
+                    <button data-lang="cpp" class="lang-btn text-xs font-mono px-3 py-1.5 rounded-xl text-slate-400 hover:text-white transition-all">C++</button>
+                    <button data-lang="python" class="lang-btn text-xs font-mono px-3 py-1.5 rounded-xl text-slate-400 hover:text-white transition-all">Python</button>
+                </div>
+
+                <!-- Quick Action Buttons: Theme & Settings -->
+                <button id="theme-toggle" class="liquid-button w-10 h-10 rounded-2xl bg-slate-800/80 light:bg-slate-200 hover:bg-slate-700 flex items-center justify-center text-yellow-400 transition" title="Chuyển chế độ Sáng/Tối">
+                    <i class="fa-solid fa-moon text-lg"></i>
+                </button>
+
+                <button id="settings-btn" class="liquid-button w-10 h-10 rounded-2xl bg-slate-800/80 light:bg-slate-200 hover:bg-slate-700 flex items-center justify-center text-cyan-400 transition" title="Cài đặt Quỹ đạo & Kích thước">
+                    <i class="fa-solid fa-sliders text-lg"></i>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content Container -->
+    <main class="max-w-7xl w-full mx-auto p-4 md:p-6 flex-1 flex flex-col gap-6">
+
+        <!-- Top Stage: Visualizer Container Card -->
+        <section class="liquid-glass rounded-3xl p-6 relative flex flex-col gap-4 overflow-hidden border border-white/10 shadow-2xl">
+            <!-- Pointers Row Banner -->
+            <div id="pointer-badges" class="min-h-[28px] flex items-center gap-3 text-xs font-mono flex-wrap">
+                <span class="text-slate-400 italic">Con trỏ hoạt động:</span>
+            </div>
+
+            <!-- Visualizer Array Stage -->
+            <div id="visualizer-stage" class="relative w-full h-[320px] bg-slate-950/70 light:bg-slate-200/50 rounded-2xl border border-white/10 light:border-slate-300 flex items-end justify-center px-6 pb-6 pt-16 overflow-hidden transition-all duration-300">
+                <!-- SVG Vector Overlay for Curved Arc Motion Arrows -->
+                <svg id="svg-layer">
+                    <defs>
+                        <marker id="arrow" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                            <path d="M 0 0 L 10 5 L 0 10 z" fill="#00f0ff" />
+                        </marker>
+                        <marker id="arrow-pink" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                            <path d="M 0 0 L 10 5 L 0 10 z" fill="#ff007f" />
+                        </marker>
+                    </defs>
+                    <path id="trajectory-path" class="path-arrow" d="" fill="none" stroke="#00f0ff" stroke-width="2.5" marker-end="url(#arrow)"/>
+                </svg>
+
+                <!-- Array Elements Container -->
+                <div id="array-container" class="relative w-full h-full flex items-end justify-center gap-2 md:gap-3 transition-all duration-300">
+                    <!-- Dynamic Bars & Ghost slots generated via JS -->
+                </div>
+            </div>
+
+            <!-- Micro-step Explanation Box -->
+            <div class="flex flex-col sm:flex-row items-center justify-between gap-4 bg-slate-900/90 light:bg-slate-200/90 px-5 py-3.5 rounded-2xl border border-white/10 light:border-slate-300">
+                <div class="flex items-center gap-3">
+                    <span class="w-3 h-3 rounded-full bg-cyan-400 animate-pulse"></span>
+                    <p id="step-explanation" class="text-sm font-medium text-slate-200 light:text-slate-800 font-mono">
+                        Sẵn sàng bắt đầu. Nhấn Phát hoặc Tiến 1 bước.
+                    </p>
+                </div>
+                <div class="text-xs font-mono text-slate-400 whitespace-nowrap">
+                    Bước: <span id="current-step-num" class="text-cyan-400 font-bold">0</span> / <span id="total-step-num" class="text-slate-400">0</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- Toolbar & Control Panel -->
+        <section class="liquid-glass rounded-3xl p-4 md:p-5 flex flex-wrap items-center justify-between gap-5 border border-white/10">
+            <!-- Playback Controls -->
+            <div class="flex items-center gap-2">
+                <button id="reset-btn" class="liquid-button p-3 rounded-2xl bg-slate-800/80 light:bg-slate-200 hover:bg-slate-700 light:hover:bg-slate-300 text-slate-300 light:text-slate-700 transition" title="Đặt lại Mảng">
+                    <i class="fa-solid fa-rotate-left"></i>
+                </button>
+                <button id="step-back-btn" class="liquid-button p-3 rounded-2xl bg-slate-800/80 light:bg-slate-200 hover:bg-slate-700 light:hover:bg-slate-300 text-slate-300 light:text-slate-700 transition" title="Lùi 1 bước">
+                    <i class="fa-solid fa-backward-step"></i>
+                </button>
+                <button id="play-btn" class="liquid-button px-6 py-3 rounded-2xl bg-gradient-to-r from-cyan-400 via-blue-500 to-indigo-600 hover:from-cyan-300 hover:to-indigo-500 text-slate-950 font-extrabold flex items-center gap-2 shadow-lg shadow-cyan-500/25 transition">
+                    <i class="fa-solid fa-play" id="play-icon"></i>
+                    <span id="play-text">Phát</span>
+                </button>
+                <button id="step-forward-btn" class="liquid-button p-3 rounded-2xl bg-slate-800/80 light:bg-slate-200 hover:bg-slate-700 light:hover:bg-slate-300 text-slate-300 light:text-slate-700 transition" title="Tiến 1 bước">
+                    <i class="fa-solid fa-forward-step"></i>
+                </button>
+            </div>
+
+            <!-- Speed & Size Controls -->
+            <div class="flex items-center gap-6 flex-wrap">
+                <!-- Speed Slider -->
+                <div class="flex items-center gap-2.5">
+                    <label class="text-xs font-semibold text-slate-400 flex items-center gap-1.5">
+                        <i class="fa-solid fa-gauge-high text-cyan-400"></i> Tốc độ:
+                    </label>
+                    <input id="speed-slider" type="range" min="0.25" max="5" step="0.25" value="1" class="w-24 accent-cyan-400 cursor-pointer">
+                    <span id="speed-val" class="text-xs font-mono font-bold text-cyan-400 w-8">1.0x</span>
+                </div>
+
+                <!-- Array Size Slider -->
+                <div class="flex items-center gap-2.5">
+                    <label class="text-xs font-semibold text-slate-400 flex items-center gap-1.5">
+                        <i class="fa-solid fa-bars-staggered text-pink-400"></i> Số lượng:
+                    </label>
+                    <input id="size-slider" type="range" min="5" max="30" step="1" value="12" class="w-24 accent-pink-500 cursor-pointer">
+                    <span id="size-val" class="text-xs font-mono font-bold text-pink-400 w-6">12</span>
+                </div>
+            </div>
+
+            <!-- Custom Input & Presets -->
+            <div class="flex items-center gap-3 flex-wrap w-full lg:w-auto">
+                <!-- Preset Select -->
+                <select id="preset-select" class="bg-slate-900 light:bg-white text-xs font-semibold text-slate-300 light:text-slate-700 px-3 py-2.5 rounded-2xl border border-white/10 light:border-slate-300 focus:outline-none cursor-pointer">
+                    <option value="random">Ngẫu nhiên</option>
+                    <option value="reversed">Giảm dần sẵn</option>
+                    <option value="nearlySorted">Gần hoàn tất</option>
+                    <option value="fewUnique">Lặp nhiều giá trị</option>
+                </select>
+
+                <!-- Search Target Input -->
+                <div id="search-target-box" class="hidden flex items-center gap-2 bg-slate-900 light:bg-white px-3 py-1.5 rounded-2xl border border-white/10 light:border-slate-300">
+                    <span class="text-xs font-semibold text-pink-400">Mục tiêu:</span>
+                    <input id="target-input" type="number" min="5" max="99" value="42" class="w-12 bg-transparent text-xs font-mono font-bold text-white light:text-slate-900 focus:outline-none">
+                </div>
+
+                <!-- Custom Array Input Box -->
+                <div class="flex items-center gap-1.5 bg-slate-900/90 light:bg-white px-3 py-1.5 rounded-2xl border border-white/10 light:border-slate-300 flex-1 sm:flex-initial">
+                    <i class="fa-solid fa-pen-to-square text-xs text-cyan-400"></i>
+                    <input id="custom-array-input" type="text" placeholder="Nhập số: 42, 15, 88, 3..." class="w-32 md:w-40 bg-transparent text-xs font-mono text-slate-200 light:text-slate-800 focus:outline-none placeholder:text-slate-500">
+                    <button id="apply-custom-btn" class="text-xs font-bold px-2 py-1 bg-cyan-500 text-slate-950 rounded-lg hover:bg-cyan-400 transition">Áp dụng</button>
+                </div>
+
+                <button id="generate-btn" class="liquid-button px-4 py-2.5 rounded-2xl bg-slate-800 hover:bg-slate-700 light:bg-slate-200 light:hover:bg-slate-300 text-xs font-semibold text-slate-200 light:text-slate-800 flex items-center gap-1.5 transition">
+                    <i class="fa-solid fa-dice text-cyan-400"></i> Dữ liệu mới
+                </button>
+            </div>
+        </section>
+
+        <!-- Bottom Panel: Code Panel & Variable Tracker & Complexity -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+            <!-- Code Highlighting Panel (7 cols) -->
+            <div class="lg:col-span-7 liquid-glass rounded-3xl p-5 flex flex-col border border-white/10">
+                <div class="flex items-center justify-between pb-3 mb-3 border-b border-white/10">
+                    <div class="flex items-center gap-2">
+                        <i class="fa-solid fa-code text-cyan-400"></i>
+                        <h3 class="text-sm font-bold text-slate-200 light:text-slate-800">Luồng Thực Thi Mã Nguồn</h3>
+                    </div>
+                    <span id="active-lang-badge" class="text-xs font-mono uppercase px-2.5 py-1 rounded-lg bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 font-bold">JavaScript</span>
+                </div>
+
+                <div class="bg-slate-950/80 light:bg-slate-900 rounded-2xl p-4 font-mono text-xs overflow-x-auto h-72 border border-white/10 text-slate-300" id="code-container">
+                    <!-- Dynamic Source Code lines rendered here with PRESERVED INDENTATION -->
+                </div>
+            </div>
+
+            <!-- Variable Tracker & Complexity Panel (5 cols) -->
+            <div class="lg:col-span-5 flex flex-col gap-6">
+
+                <!-- Variable Tracker -->
+                <div class="liquid-glass rounded-3xl p-5 flex flex-col border border-white/10 flex-1">
+                    <div class="flex items-center gap-2 pb-3 mb-3 border-b border-white/10">
+                        <i class="fa-solid fa-microchip text-pink-400"></i>
+                        <h3 class="text-sm font-bold text-slate-200 light:text-slate-800">Theo Dõi Biến Thời Gian Thực</h3>
+                    </div>
+                    <div id="variable-tracker" class="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                        <!-- Dynamic Variable Chips -->
+                    </div>
+                </div>
+
+                <!-- Algorithm Complexity Card -->
+                <div class="liquid-glass rounded-3xl p-5 border border-white/10">
+                    <div class="flex items-center gap-2 pb-2 mb-2 border-b border-white/10">
+                        <i class="fa-solid fa-layer-group text-yellow-400"></i>
+                        <h3 class="text-sm font-bold text-slate-200 light:text-slate-800">Độ Phức Tạp Thuật Toán</h3>
+                    </div>
+                    <div class="grid grid-cols-3 gap-2 text-center font-mono text-xs">
+                        <div class="bg-slate-900/70 light:bg-white/80 p-2.5 rounded-xl border border-white/10 light:border-slate-300">
+                            <span class="text-slate-400 block text-[10px] uppercase">Tốt nhất</span>
+                            <span id="comp-best" class="text-green-400 font-bold">O(N)</span>
+                        </div>
+                        <div class="bg-slate-900/70 light:bg-white/80 p-2.5 rounded-xl border border-white/10 light:border-slate-300">
+                            <span class="text-slate-400 block text-[10px] uppercase">Trung bình</span>
+                            <span id="comp-avg" class="text-cyan-400 font-bold">O(N²)</span>
+                        </div>
+                        <div class="bg-slate-900/70 light:bg-white/80 p-2.5 rounded-xl border border-white/10 light:border-slate-300">
+                            <span class="text-slate-400 block text-[10px] uppercase">Bộ nhớ</span>
+                            <span id="comp-space" class="text-pink-400 font-bold">O(1)</span>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Advanced Settings Modal -->
+    <div id="settings-modal" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-lg flex items-center justify-center p-4 hidden">
+        <div class="liquid-glass max-w-lg w-full rounded-3xl p-6 border border-white/20 shadow-2xl flex flex-col gap-5 max-h-[90vh] overflow-y-auto">
+            <div class="flex items-center justify-between border-b border-white/10 pb-3">
+                <h3 class="text-base font-extrabold text-white flex items-center gap-2">
+                    <i class="fa-solid fa-sliders text-cyan-400"></i> Cài Đặt Quỹ Đạo & Kích Thước Visualizer
+                </h3>
+                <button id="close-settings" class="text-slate-400 hover:text-white text-lg">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <div class="flex flex-col gap-4 text-xs">
+                <!-- Visualizer Stage Height -->
+                <div class="flex flex-col gap-1.5">
+                    <div class="flex justify-between">
+                        <span class="font-bold text-slate-200">Chiều cao Khung Diễn Họa</span>
+                        <span id="stage-height-val" class="font-mono text-cyan-400">320px</span>
+                    </div>
+                    <input id="stage-height-slider" type="range" min="240" max="500" value="320" class="accent-cyan-400 cursor-pointer">
+                </div>
+
+                <!-- Element Bar Max Width -->
+                <div class="flex flex-col gap-1.5">
+                    <div class="flex justify-between">
+                        <span class="font-bold text-slate-200">Bề rộng Cột tối đa (Bar Width)</span>
+                        <span id="bar-width-val" class="font-mono text-pink-400">50px</span>
+                    </div>
+                    <input id="bar-width-slider" type="range" min="20" max="90" value="50" class="accent-pink-500 cursor-pointer">
+                </div>
+
+                <!-- Trajectory Curve Mode -->
+                <div class="flex items-center justify-between">
+                    <div>
+                        <span class="font-bold text-slate-200 block">Đường cong Quỹ đạo</span>
+                        <span class="text-slate-400">Dạng chuyển động đổi vị trí phần tử</span>
+                    </div>
+                    <select id="trajectory-mode" class="bg-slate-900 text-cyan-400 px-3 py-1.5 rounded-xl border border-white/10 focus:outline-none">
+                        <option value="arc" selected>Cung tròn Bezier</option>
+                        <option value="orthogonal">Vuông góc (Từng bước)</option>
+                    </select>
+                </div>
+
+                <!-- Lift Offset Height Slider -->
+                <div class="flex flex-col gap-1.5">
+                    <div class="flex justify-between">
+                        <span class="font-bold text-slate-200">Độ cao Nâng phần tử</span>
+                        <span id="lift-height-val" class="font-mono text-cyan-400">90px</span>
+                    </div>
+                    <input id="lift-height-slider" type="range" min="40" max="160" value="90" class="accent-cyan-400 cursor-pointer">
+                </div>
+
+                <!-- Motion Vector Arrows Toggle -->
+                <div class="flex items-center justify-between">
+                    <div>
+                        <span class="font-bold text-slate-200 block">Mũi tên Vector Quỹ đạo</span>
+                        <span class="text-slate-400">Vẽ vector chỉ hướng SVG nét đứt</span>
+                    </div>
+                    <input id="toggle-arrows" type="checkbox" checked class="w-4 h-4 accent-cyan-400 cursor-pointer">
+                </div>
+
+                <!-- Easing Curve -->
+                <div class="flex items-center justify-between">
+                    <div>
+                        <span class="font-bold text-slate-200 block">Gia tốc Vật lý (Easing)</span>
+                        <span class="text-slate-400">Đường cong chuyển động mềm mại</span>
+                    </div>
+                    <select id="easing-select" class="bg-slate-900 text-cyan-400 px-3 py-1.5 rounded-xl border border-white/10 focus:outline-none">
+                        <option value="cubic-bezier(0.34, 1.56, 0.64, 1)" selected>Đàn hồi / Nảy mượt (Spring)</option>
+                        <option value="cubic-bezier(0.25, 1, 0.5, 1)">Mềm mượt (Smooth)</option>
+                        <option value="ease-in-out">Ease In-Out</option>
+                    </select>
+                </div>
+
+                <hr class="border-white/10 my-1">
+
+                <!-- Sound Controls -->
+                <div class="flex items-center justify-between">
+                    <div>
+                        <span class="font-bold text-slate-200 block">Phản hồi Âm thanh Audio</span>
+                        <span class="text-slate-400">Tổng hợp tần số âm thanh theo giá trị</span>
+                    </div>
+                    <input id="toggle-sound" type="checkbox" checked class="w-4 h-4 accent-cyan-400 cursor-pointer">
+                </div>
+
+                <!-- Volume Slider -->
+                <div class="flex flex-col gap-1.5">
+                    <div class="flex justify-between">
+                        <span class="font-bold text-slate-200">Âm lượng</span>
+                        <span id="volume-val" class="font-mono text-cyan-400">30%</span>
+                    </div>
+                    <input id="volume-slider" type="range" min="0" max="1" step="0.05" value="0.3" class="accent-cyan-400 cursor-pointer">
+                </div>
+            </div>
+
+            <button id="save-settings-btn" class="liquid-button w-full py-3 rounded-2xl bg-gradient-to-r from-cyan-400 to-blue-600 text-slate-950 font-extrabold text-xs transition shadow-lg shadow-cyan-500/20">
+                Áp Dụng & Lưu Cài Đặt
+            </button>
+        </div>
+    </div>
+
+    <!-- Web Audio API Synthesizer Class -->
+    <script>
+        class AudioSynthesizer {
+            constructor() {
+                this.ctx = null;
+                this.enabled = true;
+                this.volume = 0.3;
+            }
+
+            init() {
+                if (!this.ctx) {
+                    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+                    if (AudioCtx) this.ctx = new AudioCtx();
+                }
+                if (this.ctx && this.ctx.state === 'suspended') {
+                    this.ctx.resume();
+                }
+            }
+
+            playTone(val, maxVal = 100, duration = 0.12) {
+                if (!this.enabled) return;
+                this.init();
+                if (!this.ctx) return;
+
+                try {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+
+                    const minFreq = 220;
+                    const maxFreq = 880;
+                    const freq = minFreq + (val / maxVal) * (maxFreq - minFreq);
+
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+
+                    gain.gain.setValueAtTime(this.volume * 0.3, this.ctx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.0001, this.ctx.currentTime + duration);
+
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+
+                    osc.start();
+                    osc.stop(this.ctx.currentTime + duration);
+                } catch (e) {
+                    console.warn("Lỗi Audio Context:", e);
+                }
+            }
+        }
+
+        const synthesizer = new AudioSynthesizer();
+    </script>
+
+    <!-- Source Code Database for Algorithms with PRESERVED INDENTATION -->
+    <script>
+        const CODE_DATABASE = {
+            bubbleSort: {
+                javascript: [
+                    "function bubbleSort(arr) {",
+                    "  let n = arr.length;",
+                    "  for (let i = 0; i < n - 1; i++) {",
+                    "    for (let j = 0; j < n - i - 1; j++) {",
+                    "      if (arr[j] > arr[j + 1]) {",
+                    "        let temp = arr[j];",
+                    "        arr[j] = arr[j + 1];",
+                    "        arr[j + 1] = temp;",
+                    "      }",
+                    "    }",
+                    "  }",
+                    "}"
+                ],
+                cpp: [
+                    "void bubbleSort(int arr[], int n) {",
+                    "  for (int i = 0; i < n - 1; i++) {",
+                    "    for (int j = 0; j < n - i - 1; j++) {",
+                    "      if (arr[j] > arr[j + 1]) {",
+                    "        int temp = arr[j];",
+                    "        arr[j] = arr[j + 1];",
+                    "        arr[j + 1] = temp;",
+                    "      }",
+                    "    }",
+                    "  }",
+                    "}"
+                ],
+                python: [
+                    "def bubble_sort(arr):",
+                    "    n = len(arr)",
+                    "    for i in range(n - 1):",
+                    "        for j in range(0, n - i - 1):",
+                    "            if arr[j] > arr[j + 1]:",
+                    "                arr[j], arr[j + 1] = arr[j + 1], arr[j]"
+                ]
+            },
+            selectionSort: {
+                javascript: [
+                    "function selectionSort(arr) {",
+                    "  let n = arr.length;",
+                    "  for (let i = 0; i < n - 1; i++) {",
+                    "    let min_idx = i;",
+                    "    for (let j = i + 1; j < n; j++) {",
+                    "      if (arr[j] < arr[min_idx]) min_idx = j;",
+                    "    }",
+                    "    let temp = arr[i];",
+                    "    arr[i] = arr[min_idx];",
+                    "    arr[min_idx] = temp;",
+                    "  }",
+                    "}"
+                ],
+                cpp: [
+                    "void selectionSort(int arr[], int n) {",
+                    "  for (int i = 0; i < n - 1; i++) {",
+                    "    int min_idx = i;",
+                    "    for (int j = i + 1; j < n; j++)",
+                    "      if (arr[j] < arr[min_idx]) min_idx = j;",
+                    "    swap(arr[i], arr[min_idx]);",
+                    "  }",
+                    "}"
+                ],
+                python: [
+                    "def selection_sort(arr):",
+                    "    n = len(arr)",
+                    "    for i in range(n - 1):",
+                    "        min_idx = i",
+                    "        for j in range(i + 1, n):",
+                    "            if arr[j] < arr[min_idx]:",
+                    "                min_idx = j",
+                    "        arr[i], arr[min_idx] = arr[min_idx], arr[i]"
+                ]
+            },
+            insertionSort: {
+                javascript: [
+                    "function insertionSort(arr) {",
+                    "  let n = arr.length;",
+                    "  for (let i = 1; i < n; i++) {",
+                    "    let key = arr[i];",
+                    "    let j = i - 1;",
+                    "    while (j >= 0 && arr[j] > key) {",
+                    "      arr[j + 1] = arr[j];",
+                    "      j = j - 1;",
+                    "    }",
+                    "    arr[j + 1] = key;",
+                    "  }",
+                    "}"
+                ],
+                cpp: [
+                    "void insertionSort(int arr[], int n) {",
+                    "  for (int i = 1; i < n; i++) {",
+                    "    int key = arr[i];",
+                    "    int j = i - 1;",
+                    "    while (j >= 0 && arr[j] > key) {",
+                    "      arr[j + 1] = arr[j];",
+                    "      j = j - 1;",
+                    "    }",
+                    "    arr[j + 1] = key;",
+                    "  }",
+                    "}"
+                ],
+                python: [
+                    "def insertion_sort(arr):",
+                    "    for i in range(1, len(arr)):",
+                    "        key = arr[i]",
+                    "        j = i - 1",
+                    "        while j >= 0 and arr[j] > key:",
+                    "            arr[j + 1] = arr[j]",
+                    "            j -= 1",
+                    "        arr[j + 1] = key"
+                ]
+            },
+            quickSort: {
+                javascript: [
+                    "function quickSort(arr, low, high) {",
+                    "  if (low < high) {",
+                    "    let pivot = arr[high];",
+                    "    let i = low - 1;",
+                    "    for (let j = low; j < high; j++) {",
+                    "      if (arr[j] < pivot) {",
+                    "        i++; swap(arr[i], arr[j]);",
+                    "      }",
+                    "    }",
+                    "    swap(arr[i + 1], arr[high]);",
+                    "    let pi = i + 1;",
+                    "    quickSort(arr, low, pi - 1);",
+                    "    quickSort(arr, pi + 1, high);",
+                    "  }",
+                    "}"
+                ],
+                cpp: [
+                    "int partition(int arr[], int low, int high) {",
+                    "  int pivot = arr[high]; int i = low - 1;",
+                    "  for (int j = low; j < high; j++) {",
+                    "    if (arr[j] < pivot) { i++; swap(arr[i], arr[j]); }",
+                    "  }",
+                    "  swap(arr[i + 1], arr[high]);",
+                    "  return i + 1;",
+                    "}"
+                ],
+                python: [
+                    "def quick_sort(arr, low, high):",
+                    "    if low < high:",
+                    "        pivot = arr[high]",
+                    "        i = low - 1",
+                    "        for j in range(low, high):",
+                    "            if arr[j] < pivot:",
+                    "                i += 1",
+                    "                arr[i], arr[j] = arr[j], arr[i]",
+                    "        arr[i + 1], arr[high] = arr[high], arr[i + 1]"
+                ]
+            },
+            mergeSort: {
+                javascript: [
+                    "function mergeSort(arr, l, r) {",
+                    "  if (l >= r) return;",
+                    "  let m = l + Math.floor((r - l) / 2);",
+                    "  mergeSort(arr, l, m);",
+                    "  mergeSort(arr, m + 1, r);",
+                    "  merge(arr, l, m, r);",
+                    "}"
+                ],
+                cpp: [
+                    "void mergeSort(int arr[], int l, int r) {",
+                    "  if (l >= r) return;",
+                    "  int m = l + (r - l) / 2;",
+                    "  mergeSort(arr, l, m);",
+                    "  mergeSort(arr, m + 1, r);",
+                    "  merge(arr, l, m, r);",
+                    "}"
+                ],
+                python: [
+                    "def merge_sort(arr, l, r):",
+                    "    if l < r:",
+                    "        m = (l + r) // 2",
+                    "        merge_sort(arr, l, m)",
+                    "        merge_sort(arr, m + 1, r)",
+                    "        merge(arr, l, m, r)"
+                ]
+            },
+            heapSort: {
+                javascript: [
+                    "function heapSort(arr) {",
+                    "  let n = arr.length;",
+                    "  for (let i = Math.floor(n / 2) - 1; i >= 0; i--)",
+                    "    heapify(arr, n, i);",
+                    "  for (let i = n - 1; i > 0; i--) {",
+                    "    swap(arr[0], arr[i]);",
+                    "    heapify(arr, i, 0);",
+                    "  }",
+                    "}"
+                ],
+                cpp: [
+                    "void heapSort(int arr[], int n) {",
+                    "  for (int i = n / 2 - 1; i >= 0; i--)",
+                    "    heapify(arr, n, i);",
+                    "  for (int i = n - 1; i > 0; i--) {",
+                    "    swap(arr[0], arr[i]);",
+                    "    heapify(arr, i, 0);",
+                    "  }",
+                    "}"
+                ],
+                python: [
+                    "def heap_sort(arr):",
+                    "    n = len(arr)",
+                    "    for i in range(n // 2 - 1, -1, -1):",
+                    "        heapify(arr, n, i)",
+                    "    for i in range(n - 1, 0, -1):",
+                    "        arr[i], arr[0] = arr[0], arr[i]",
+                    "        heapify(arr, i, 0)"
+                ]
+            },
+            linearSearch: {
+                javascript: [
+                    "function linearSearch(arr, target) {",
+                    "  for (let i = 0; i < arr.length; i++) {",
+                    "    if (arr[i] === target) {",
+                    "      return i; // Tìm thấy mục tiêu",
+                    "    }",
+                    "  }",
+                    "  return -1; // Không tìm thấy",
+                    "}"
+                ],
+                cpp: [
+                    "int linearSearch(int arr[], int n, int target) {",
+                    "  for (int i = 0; i < n; i++) {",
+                    "    if (arr[i] == target)",
+                    "      return i;",
+                    "  }",
+                    "  return -1;",
+                    "}"
+                ],
+                python: [
+                    "def linear_search(arr, target):",
+                    "    for i in range(len(arr)):",
+                    "        if arr[i] == target:",
+                    "            return i",
+                    "    return -1"
+                ]
+            },
+            binarySearch: {
+                javascript: [
+                    "function binarySearch(arr, target) {",
+                    "  let low = 0, high = arr.length - 1;",
+                    "  while (low <= high) {",
+                    "    let mid = Math.floor((low + high) / 2);",
+                    "    if (arr[mid] === target) return mid;",
+                    "    if (arr[mid] < target) low = mid + 1;",
+                    "    else high = mid - 1;",
+                    "  }",
+                    "  return -1;",
+                    "}"
+                ],
+                cpp: [
+                    "int binarySearch(int arr[], int n, int target) {",
+                    "  int low = 0, high = n - 1;",
+                    "  while (low <= high) {",
+                    "    int mid = low + (high - low) / 2;",
+                    "    if (arr[mid] == target) return mid;",
+                    "    if (arr[mid] < target) low = mid + 1;",
+                    "    else high = mid - 1;",
+                    "  }",
+                    "  return -1;",
+                    "}"
+                ],
+                python: [
+                    "def binary_search(arr, target):",
+                    "    low, high = 0, len(arr) - 1",
+                    "    while low <= high:",
+                    "        mid = (low + high) // 2",
+                    "        if arr[mid] == target:",
+                    "            return mid",
+                    "        elif arr[mid] < target:",
+                    "            low = mid + 1",
+                    "        else:",
+                    "            high = mid - 1",
+                    "    return -1"
+                ]
+            }
+        };
+
+        const ALGO_COMPLEXITY = {
+            bubbleSort: { best: 'O(N)', avg: 'O(N²)', space: 'O(1)' },
+            selectionSort: { best: 'O(N²)', avg: 'O(N²)', space: 'O(1)' },
+            insertionSort: { best: 'O(N)', avg: 'O(N²)', space: 'O(1)' },
+            quickSort: { best: 'O(N log N)', avg: 'O(N log N)', space: 'O(log N)' },
+            mergeSort: { best: 'O(N log N)', avg: 'O(N log N)', space: 'O(N)' },
+            heapSort: { best: 'O(N log N)', avg: 'O(N log N)', space: 'O(1)' },
+            linearSearch: { best: 'O(1)', avg: 'O(N)', space: 'O(1)' },
+            binarySearch: { best: 'O(1)', avg: 'O(log N)', space: 'O(1)' }
+        };
+    </script>
+
+    <!-- Micro-step Generator Engine Supporting Ascending & Descending -->
+    <script>
+        class StepGenerator {
+
+            static generate(algoName, inputArr, targetVal, sortOrder = 'asc') {
+                const arr = [...inputArr];
+                const steps = [];
+                const isDesc = sortOrder === 'desc';
+
+                const shouldSwap = (a, b) => isDesc ? a < b : a > b;
+
+                const addStep = (config) => {
+                    steps.push({
+                        array: [...config.array],
+                        codeLine: config.codeLine || 1,
+                        vars: config.vars || {},
+                        pointers: config.pointers || {},
+                        highlights: config.highlights || {},
+                        trajectory: config.trajectory || null,
+                        explanation: config.explanation || ''
+                    });
+                };
+
+                // Initial State
+                addStep({
+                    array: arr,
+                    codeLine: 1,
+                    explanation: `Khởi tạo mảng gồm ${arr.length} phần tử. Hướng sắp xếp: ${isDesc ? 'Giảm dần (Z->A)' : 'Tăng dần (A->Z)'}.`
+                });
+
+                if (algoName === 'bubbleSort') {
+                    const n = arr.length;
+                    for (let i = 0; i < n - 1; i++) {
+                        for (let j = 0; j < n - i - 1; j++) {
+                            addStep({
+                                array: arr,
+                                codeLine: 5,
+                                vars: { i, j, 'arr[j]': arr[j], 'arr[j+1]': arr[j + 1] },
+                                pointers: { i, j, 'j+1': j + 1 },
+                                highlights: { [j]: 'comparing', [j + 1]: 'comparing' },
+                                explanation: `So sánh arr[${j}] = ${arr[j]} và arr[${j + 1}] = ${arr[j + 1]}`
+                            });
+
+                            if (shouldSwap(arr[j], arr[j + 1])) {
+                                addStep({
+                                    array: arr,
+                                    codeLine: 6,
+                                    vars: { i, j, temp: arr[j] },
+                                    pointers: { j, 'j+1': j + 1 },
+                                    highlights: { [j]: 'swapping', [j + 1]: 'swapping' },
+                                    trajectory: { fromIdx: j, toIdx: j + 1 },
+                                    explanation: `Đổi chỗ ${arr[j]} và ${arr[j + 1]} để thỏa mãn thứ tự ${isDesc ? 'Giảm dần' : 'Tăng dần'}!`
+                                });
+
+                                const temp = arr[j];
+                                arr[j] = arr[j + 1];
+                                arr[j + 1] = temp;
+
+                                addStep({
+                                    array: arr,
+                                    codeLine: 8,
+                                    vars: { i, j },
+                                    pointers: { j, 'j+1': j + 1 },
+                                    highlights: { [j]: 'active', [j + 1]: 'active' },
+                                    explanation: `Đã hoàn tất đổi chỗ. Mảng cập nhật.`
+                                });
+                            }
+                        }
+                    }
+                    const allSorted = {};
+                    arr.forEach((_, idx) => allSorted[idx] = 'sorted');
+                    addStep({ array: arr, codeLine: 1, highlights: allSorted, explanation: 'Hoàn tất Sắp xếp Nổi bọt!' });
+                }
+
+                else if (algoName === 'selectionSort') {
+                    const n = arr.length;
+                    for (let i = 0; i < n - 1; i++) {
+                        let target_idx = i;
+                        addStep({
+                            array: arr,
+                            codeLine: 4,
+                            vars: { i, target_idx },
+                            pointers: { i, target_idx },
+                            highlights: { [i]: 'key', [target_idx]: 'key' },
+                            explanation: `Giả định vị trí cần tìm tại chỉ số ${i} (giá trị: ${arr[i]})`
+                        });
+
+                        for (let j = i + 1; j < n; j++) {
+                            addStep({
+                                array: arr,
+                                codeLine: 5,
+                                vars: { i, j, target_idx, 'arr[j]': arr[j], 'arr[target_idx]': arr[target_idx] },
+                                pointers: { i, j, target_idx },
+                                highlights: { [j]: 'comparing', [target_idx]: 'key' },
+                                explanation: `So sánh arr[${j}] = ${arr[j]} với giá trị mục tiêu arr[${target_idx}] = ${arr[target_idx]}`
+                            });
+
+                            const isBetter = isDesc ? arr[j] > arr[target_idx] : arr[j] < arr[target_idx];
+                            if (isBetter) {
+                                target_idx = j;
+                                addStep({
+                                    array: arr,
+                                    codeLine: 6,
+                                    vars: { i, j, target_idx },
+                                    pointers: { i, j, target_idx },
+                                    highlights: { [target_idx]: 'key' },
+                                    explanation: `Tìm thấy mốc mới thích hợp hơn tại chỉ số ${target_idx} (giá trị: ${arr[target_idx]})`
+                                });
+                            }
+                        }
+
+                        if (target_idx !== i) {
+                            addStep({
+                                array: arr,
+                                codeLine: 8,
+                                vars: { i, target_idx, 'arr[i]': arr[i], 'arr[target_idx]': arr[target_idx] },
+                                pointers: { i, target_idx },
+                                highlights: { [i]: 'swapping', [target_idx]: 'swapping' },
+                                trajectory: { fromIdx: target_idx, toIdx: i },
+                                explanation: `Đổi chỗ phần tử ${arr[target_idx]} về vị trí ${i}`
+                            });
+
+                            const temp = arr[i];
+                            arr[i] = arr[target_idx];
+                            arr[target_idx] = temp;
+                        }
+                    }
+                    const allSorted = {};
+                    arr.forEach((_, idx) => allSorted[idx] = 'sorted');
+                    addStep({ array: arr, codeLine: 1, highlights: allSorted, explanation: 'Hoàn tất Sắp xếp Chọn!' });
+                }
+
+                else if (algoName === 'insertionSort') {
+                    const n = arr.length;
+                    for (let i = 1; i < n; i++) {
+                        let key = arr[i];
+                        let j = i - 1;
+
+                        addStep({
+                            array: arr,
+                            codeLine: 4,
+                            vars: { i, key, j },
+                            pointers: { i, key_pos: i },
+                            highlights: { [i]: 'key' },
+                            trajectory: { fromIdx: i, toIdx: i, liftOnly: true },
+                            explanation: `Nâng phần tử khóa ${key} tại chỉ số ${i}`
+                        });
+
+                        while (j >= 0 && shouldSwap(arr[j], key)) {
+                            addStep({
+                                array: arr,
+                                codeLine: 6,
+                                vars: { i, key, j, 'arr[j]': arr[j] },
+                                pointers: { i, j },
+                                highlights: { [j]: 'comparing' },
+                                explanation: `Dịch chuyển arr[${j}] = ${arr[j]} sang phải vị trí ${j + 1}`
+                            });
+
+                            arr[j + 1] = arr[j];
+
+                            addStep({
+                                array: arr,
+                                codeLine: 7,
+                                vars: { i, key, j },
+                                pointers: { i, j: j + 1 },
+                                highlights: { [j + 1]: 'active' },
+                                trajectory: { fromIdx: j, toIdx: j + 1 },
+                                explanation: `Đã đẩy phần tử sang phải`
+                            });
+
+                            j--;
+                        }
+
+                        arr[j + 1] = key;
+                        addStep({
+                            array: arr,
+                            codeLine: 10,
+                            vars: { i, key, 'inserted_at': j + 1 },
+                            pointers: { i, key_pos: j + 1 },
+                            highlights: { [j + 1]: 'sorted' },
+                            explanation: `Chèn giá trị khóa ${key} vào vị trí thích hợp ${j + 1}`
+                        });
+                    }
+                    const allSorted = {};
+                    arr.forEach((_, idx) => allSorted[idx] = 'sorted');
+                    addStep({ array: arr, codeLine: 1, highlights: allSorted, explanation: 'Hoàn tất Sắp xếp Chèn!' });
+                }
+
+                else if (algoName === 'quickSort') {
+                    const partition = (low, high) => {
+                        let pivot = arr[high];
+                        let i = low - 1;
+
+                        addStep({
+                            array: arr,
+                            codeLine: 3,
+                            vars: { low, high, pivot },
+                            pointers: { low, high, pivot: high },
+                            highlights: { [high]: 'key' },
+                            explanation: `Chọn chốt (pivot) = ${pivot} tại chỉ số ${high}`
+                        });
+
+                        for (let j = low; j < high; j++) {
+                            const isMatched = isDesc ? arr[j] > pivot : arr[j] < pivot;
+                            addStep({
+                                array: arr,
+                                codeLine: 5,
+                                vars: { low, high, pivot, i, j, 'arr[j]': arr[j] },
+                                pointers: { i: Math.max(0, i), j, pivot: high },
+                                highlights: { [j]: 'comparing', [high]: 'key' },
+                                explanation: `So sánh arr[${j}] = ${arr[j]} với chốt ${pivot}`
+                            });
+
+                            if (isMatched) {
+                                i++;
+                                if (i !== j) {
+                                    addStep({
+                                        array: arr,
+                                        codeLine: 6,
+                                        vars: { i, j, pivot },
+                                        pointers: { i, j, pivot: high },
+                                        highlights: { [i]: 'swapping', [j]: 'swapping' },
+                                        trajectory: { fromIdx: j, toIdx: i },
+                                        explanation: `Đổi chỗ arr[${i}] và arr[${j}]`
+                                    });
+
+                                    let temp = arr[i];
+                                    arr[i] = arr[j];
+                                    arr[j] = temp;
+                                }
+                            }
+                        }
+
+                        addStep({
+                            array: arr,
+                            codeLine: 10,
+                            vars: { pivot, 'pivot_target': i + 1 },
+                            pointers: { pivot: high, target: i + 1 },
+                            highlights: { [i + 1]: 'swapping', [high]: 'swapping' },
+                            trajectory: { fromIdx: high, toIdx: i + 1 },
+                            explanation: `Đặt chốt ${pivot} về vị trí chính xác ${i + 1}`
+                        });
+
+                        let temp = arr[i + 1];
+                        arr[i + 1] = arr[high];
+                        arr[high] = temp;
+
+                        return i + 1;
+                    };
+
+                    const qSort = (low, high) => {
+                        if (low < high) {
+                            let pi = partition(low, high);
+                            qSort(low, pi - 1);
+                            qSort(pi + 1, high);
+                        }
+                    };
+
+                    qSort(0, arr.length - 1);
+                    const allSorted = {};
+                    arr.forEach((_, idx) => allSorted[idx] = 'sorted');
+                    addStep({ array: arr, codeLine: 1, highlights: allSorted, explanation: 'Hoàn tất Sắp xếp Nhanh!' });
+                }
+
+                else if (algoName === 'mergeSort') {
+                    const merge = (l, m, r) => {
+                        let left = arr.slice(l, m + 1);
+                        let right = arr.slice(m + 1, r + 1);
+                        let i = 0, j = 0, k = l;
+
+                        while (i < left.length && j < right.length) {
+                            const takeLeft = isDesc ? left[i] >= right[j] : left[i] <= right[j];
+                            addStep({
+                                array: arr,
+                                codeLine: 6,
+                                vars: { l, m, r, k, 'left[i]': left[i], 'right[j]': right[j] },
+                                pointers: { l, r, k },
+                                highlights: { [l + i]: 'comparing', [m + 1 + j]: 'comparing' },
+                                explanation: `So sánh vế trái ${left[i]} và vế phải ${right[j]}`
+                            });
+
+                            if (takeLeft) {
+                                arr[k] = left[i];
+                                i++;
+                            } else {
+                                arr[k] = right[j];
+                                j++;
+                            }
+
+                            addStep({
+                                array: arr,
+                                codeLine: 6,
+                                vars: { k, 'placed': arr[k] },
+                                pointers: { k },
+                                highlights: { [k]: 'active' },
+                                trajectory: { fromIdx: k, toIdx: k },
+                                explanation: `Đặt ${arr[k]} vào mảng hợp nhất tại vị trí ${k}`
+                            });
+                            k++;
+                        }
+
+                        while (i < left.length) {
+                            arr[k] = left[i];
+                            i++; k++;
+                        }
+                        while (j < right.length) {
+                            arr[k] = right[j];
+                            j++; k++;
+                        }
+                    };
+
+                    const mSort = (l, r) => {
+                        if (l < r) {
+                            let m = Math.floor((l + r) / 2);
+                            mSort(l, m);
+                            mSort(m + 1, r);
+                            merge(l, m, r);
+                        }
+                    };
+
+                    mSort(0, arr.length - 1);
+                    const allSorted = {};
+                    arr.forEach((_, idx) => allSorted[idx] = 'sorted');
+                    addStep({ array: arr, codeLine: 1, highlights: allSorted, explanation: 'Hoàn tất Sắp xếp Trộn!' });
+                }
+
+                else if (algoName === 'heapSort') {
+                    const heapify = (n, i) => {
+                        let target = i;
+                        let l = 2 * i + 1;
+                        let r = 2 * i + 2;
+
+                        if (l < n && (isDesc ? arr[l] < arr[target] : arr[l] > arr[target])) target = l;
+                        if (r < n && (isDesc ? arr[r] < arr[target] : arr[r] > arr[target])) target = r;
+
+                        if (target !== i) {
+                            addStep({
+                                array: arr,
+                                codeLine: 4,
+                                vars: { i, target, 'arr[i]': arr[i], 'arr[target]': arr[target] },
+                                pointers: { i, target },
+                                highlights: { [i]: 'swapping', [target]: 'swapping' },
+                                trajectory: { fromIdx: target, toIdx: i },
+                                explanation: `Cấu trúc lại Heap: Đổi nút ${arr[i]} với nút con ${arr[target]}`
+                            });
+
+                            let temp = arr[i];
+                            arr[i] = arr[target];
+                            arr[target] = temp;
+
+                            heapify(n, target);
+                        }
+                    };
+
+                    const n = arr.length;
+                    for (let i = Math.floor(n / 2) - 1; i >= 0; i--) heapify(n, i);
+
+                    for (let i = n - 1; i > 0; i--) {
+                        addStep({
+                            array: arr,
+                            codeLine: 6,
+                            vars: { i, root: arr[0] },
+                            pointers: { root: 0, last: i },
+                            highlights: { [0]: 'swapping', [i]: 'swapping' },
+                            trajectory: { fromIdx: 0, toIdx: i },
+                            explanation: `Đưa đỉnh đống ${arr[0]} về vị trí cuối ${i}`
+                        });
+
+                        let temp = arr[0];
+                        arr[0] = arr[i];
+                        arr[i] = temp;
+
+                        heapify(i, 0);
+                    }
+
+                    const allSorted = {};
+                    arr.forEach((_, idx) => allSorted[idx] = 'sorted');
+                    addStep({ array: arr, codeLine: 1, highlights: allSorted, explanation: 'Hoàn tất Sắp xếp Vun đống!' });
+                }
+
+                else if (algoName === 'linearSearch') {
+                    const target = parseInt(targetVal, 10) || 42;
+                    let found = false;
+
+                    for (let i = 0; i < arr.length; i++) {
+                        if (arr[i] === target) {
+                            addStep({
+                                array: arr,
+                                codeLine: 3,
+                                vars: { i, 'arr[i]': arr[i], target },
+                                pointers: { i, target },
+                                highlights: { [i]: 'sorted' },
+                                explanation: `ĐÃ TÌM THẤY! arr[${i}] === ${target}.`
+                            });
+                            found = true;
+                            break;
+                        } else {
+                            addStep({
+                                array: arr,
+                                codeLine: 2,
+                                vars: { i, 'arr[i]': arr[i], target },
+                                pointers: { i },
+                                highlights: { [i]: 'comparing' },
+                                explanation: `Kiểm tra arr[${i}] = ${arr[i]}. Không bằng mục tiêu ${target}.`
+                            });
+                        }
+                    }
+
+                    if (!found) {
+                        addStep({
+                            array: arr,
+                            codeLine: 7,
+                            vars: { target, result: -1 },
+                            explanation: `Không tìm thấy giá trị ${target} trong mảng.`
+                        });
+                    }
+                }
+
+                else if (algoName === 'binarySearch') {
+                    arr.sort((a, b) => isDesc ? b - a : a - b);
+                    const target = parseInt(targetVal, 10) || 42;
+                    let low = 0;
+                    let high = arr.length - 1;
+                    let found = false;
+
+                    addStep({
+                        array: arr,
+                        codeLine: 2,
+                        vars: { low, high, target },
+                        pointers: { low, high },
+                        explanation: `Mảng đã sắp xếp (${isDesc ? 'Giảm dần' : 'Tăng dần'}). Phạm vi: low=${low}, high=${high}`
+                    });
+
+                    while (low <= high) {
+                        let mid = Math.floor((low + high) / 2);
+                        const highlights = {};
+
+                        for (let k = 0; k < arr.length; k++) {
+                            if (k < low || k > high) highlights[k] = 'excluded';
+                            else highlights[k] = 'active';
+                        }
+                        highlights[mid] = 'key';
+
+                        addStep({
+                            array: arr,
+                            codeLine: 4,
+                            vars: { low, high, mid, 'arr[mid]': arr[mid], target },
+                            pointers: { low, mid, high },
+                            highlights,
+                            explanation: `Tính mid = ${mid} (giá trị: ${arr[mid]}). So sánh với target = ${target}`
+                        });
+
+                        if (arr[mid] === target) {
+                            highlights[mid] = 'sorted';
+                            addStep({
+                                array: arr,
+                                codeLine: 5,
+                                vars: { mid, 'arr[mid]': arr[mid], target },
+                                pointers: { mid },
+                                highlights,
+                                explanation: `TÌM THẤY MỤC TIÊU tại chỉ số ${mid}!`
+                            });
+                            found = true;
+                            break;
+                        } else {
+                            const isLeftHalf = isDesc ? arr[mid] < target : arr[mid] > target;
+                            if (isLeftHalf) {
+                                high = mid - 1;
+                            } else {
+                                low = mid + 1;
+                            }
+                        }
+                    }
+
+                    if (!found) {
+                        addStep({
+                            array: arr,
+                            codeLine: 9,
+                            vars: { target, result: -1 },
+                            explanation: `Không tìm thấy giá trị ${target} trong mảng.`
+                        });
+                    }
+                }
+
+                return steps;
+            }
+        }
+    </script>
+
+    <!-- Main Application Controller -->
+    <script>
+        class ApplicationState {
+            constructor() {
+                this.currentLanguage = 'javascript';
+                this.currentAlgorithm = 'insertionSort';
+                this.sortOrder = 'asc';
+                this.arraySize = 12;
+                this.playbackSpeed = 1.0;
+                this.presetType = 'random';
+                this.searchTarget = 42;
+
+                // Physics & Visual Size Configs
+                this.stageHeight = 320;
+                this.barMaxWidth = 50;
+                this.trajectoryMode = 'arc';
+                this.liftHeight = 90;
+                this.showArrows = true;
+                this.easing = 'cubic-bezier(0.34, 1.56, 0.64, 1)';
+
+                this.arrayData = [];
+                this.steps = [];
+                this.currentStepIdx = 0;
+                this.isPlaying = false;
+                this.timer = null;
+
+                this.dom = {
+                    algoSelect: document.getElementById('algo-select'),
+                    sortOrderSelect: document.getElementById('sort-order-select'),
+                    sortOrderBox: document.getElementById('sort-order-box'),
+                    codeContainer: document.getElementById('code-container'),
+                    activeLangBadge: document.getElementById('active-lang-badge'),
+                    arrayContainer: document.getElementById('array-container'),
+                    visualizerStage: document.getElementById('visualizer-stage'),
+                    variableTracker: document.getElementById('variable-tracker'),
+                    pointerBadges: document.getElementById('pointer-badges'),
+                    stepExplanation: document.getElementById('step-explanation'),
+                    currentStepNum: document.getElementById('current-step-num'),
+                    totalStepNum: document.getElementById('total-step-num'),
+                    playBtn: document.getElementById('play-btn'),
+                    playText: document.getElementById('play-text'),
+                    playIcon: document.getElementById('play-icon'),
+                    resetBtn: document.getElementById('reset-btn'),
+                    stepForwardBtn: document.getElementById('step-forward-btn'),
+                    stepBackBtn: document.getElementById('step-back-btn'),
+                    speedSlider: document.getElementById('speed-slider'),
+                    speedVal: document.getElementById('speed-val'),
+                    sizeSlider: document.getElementById('size-slider'),
+                    sizeVal: document.getElementById('size-val'),
+                    presetSelect: document.getElementById('preset-select'),
+                    generateBtn: document.getElementById('generate-btn'),
+                    searchTargetBox: document.getElementById('search-target-box'),
+                    targetInput: document.getElementById('target-input'),
+                    customArrayInput: document.getElementById('custom-array-input'),
+                    applyCustomBtn: document.getElementById('apply-custom-btn'),
+                    themeToggle: document.getElementById('theme-toggle'),
+                    settingsBtn: document.getElementById('settings-btn'),
+                    settingsModal: document.getElementById('settings-modal'),
+                    closeSettings: document.getElementById('close-settings'),
+                    saveSettingsBtn: document.getElementById('save-settings-btn'),
+                    stageHeightSlider: document.getElementById('stage-height-slider'),
+                    stageHeightVal: document.getElementById('stage-height-val'),
+                    barWidthSlider: document.getElementById('bar-width-slider'),
+                    barWidthVal: document.getElementById('bar-width-val'),
+                    trajectoryMode: document.getElementById('trajectory-mode'),
+                    liftHeightSlider: document.getElementById('lift-height-slider'),
+                    liftHeightVal: document.getElementById('lift-height-val'),
+                    toggleArrows: document.getElementById('toggle-arrows'),
+                    easingSelect: document.getElementById('easing-select'),
+                    toggleSound: document.getElementById('toggle-sound'),
+                    volumeSlider: document.getElementById('volume-slider'),
+                    volumeVal: document.getElementById('volume-val'),
+                    svgLayer: document.getElementById('svg-layer'),
+                    trajectoryPath: document.getElementById('trajectory-path'),
+                    compBest: document.getElementById('comp-best'),
+                    compAvg: document.getElementById('comp-avg'),
+                    compSpace: document.getElementById('comp-space')
+                };
+            }
+
+            init() {
+                this.attachEventListeners();
+                this.generateArrayData();
+                this.updateAlgorithmInfo();
+                this.rebuildSteps();
+            }
+
+            attachEventListeners() {
+                // Language buttons
+                document.querySelectorAll('.lang-btn').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        document.querySelectorAll('.lang-btn').forEach(b => {
+                            b.classList.remove('bg-cyan-500', 'text-slate-950', 'shadow');
+                            b.classList.add('text-slate-400');
+                        });
+                        e.target.classList.add('bg-cyan-500', 'text-slate-950', 'shadow');
+                        e.target.classList.remove('text-slate-400');
+
+                        this.currentLanguage = e.target.dataset.lang;
+                        this.dom.activeLangBadge.innerText = this.currentLanguage.toUpperCase();
+                        this.renderCodePanel();
+                    });
+                });
+
+                // Algo Select
+                this.dom.algoSelect.addEventListener('change', (e) => {
+                    this.currentAlgorithm = e.target.value;
+                    const isSearch = this.currentAlgorithm.toLowerCase().includes('search');
+                    if (isSearch) {
+                        this.dom.searchTargetBox.classList.remove('hidden');
+                    } else {
+                        this.dom.searchTargetBox.classList.add('hidden');
+                    }
+                    this.updateAlgorithmInfo();
+                    this.generateArrayData();
+                    this.rebuildSteps();
+                });
+
+                // Sort Order Select
+                this.dom.sortOrderSelect.addEventListener('change', (e) => {
+                    this.sortOrder = e.target.value;
+                    this.rebuildSteps();
+                });
+
+                // Custom Array Input
+                this.dom.applyCustomBtn.addEventListener('click', () => {
+                    const rawVal = this.dom.customArrayInput.value.trim();
+                    if (rawVal) {
+                        const parsed = rawVal.split(/[\s,]+/).map(v => parseInt(v, 10)).filter(v => !isNaN(v));
+                        if (parsed.length >= 2) {
+                            this.arrayData = parsed.slice(0, 30);
+                            this.arraySize = this.arrayData.length;
+                            this.dom.sizeSlider.value = this.arraySize;
+                            this.dom.sizeVal.innerText = this.arraySize;
+                            this.rebuildSteps();
+                        }
+                    }
+                });
+
+                // Speed Slider
+                this.dom.speedSlider.addEventListener('input', (e) => {
+                    this.playbackSpeed = parseFloat(e.target.value);
+                    this.dom.speedVal.innerText = `${this.playbackSpeed.toFixed(2)}x`;
+                    if (this.isPlaying) {
+                        this.pause();
+                        this.play();
+                    }
+                });
+
+                // Size Slider
+                this.dom.sizeSlider.addEventListener('input', (e) => {
+                    this.arraySize = parseInt(e.target.value, 10);
+                    this.dom.sizeVal.innerText = this.arraySize;
+                    this.generateArrayData();
+                    this.rebuildSteps();
+                });
+
+                // Presets
+                this.dom.presetSelect.addEventListener('change', (e) => {
+                    this.presetType = e.target.value;
+                    this.generateArrayData();
+                    this.rebuildSteps();
+                });
+
+                // Target Input
+                this.dom.targetInput.addEventListener('change', (e) => {
+                    this.searchTarget = parseInt(e.target.value, 10) || 42;
+                    this.rebuildSteps();
+                });
+
+                // Playback Buttons
+                this.dom.generateBtn.addEventListener('click', () => {
+                    this.generateArrayData();
+                    this.rebuildSteps();
+                });
+
+                this.dom.playBtn.addEventListener('click', () => {
+                    if (this.isPlaying) this.pause();
+                    else this.play();
+                });
+
+                this.dom.resetBtn.addEventListener('click', () => {
+                    this.pause();
+                    this.currentStepIdx = 0;
+                    this.renderCurrentStep();
+                });
+
+                this.dom.stepForwardBtn.addEventListener('click', () => {
+                    this.pause();
+                    if (this.currentStepIdx < this.steps.length - 1) {
+                        this.currentStepIdx++;
+                        this.renderCurrentStep();
+                    }
+                });
+
+                this.dom.stepBackBtn.addEventListener('click', () => {
+                    this.pause();
+                    if (this.currentStepIdx > 0) {
+                        this.currentStepIdx--;
+                        this.renderCurrentStep();
+                    }
+                });
+
+                // Theme Toggle
+                this.dom.themeToggle.addEventListener('click', () => {
+                    document.documentElement.classList.toggle('dark');
+                    document.documentElement.classList.toggle('light');
+                    const isLight = document.documentElement.classList.contains('light');
+                    this.dom.themeToggle.innerHTML = isLight
+                        ? '<i class="fa-solid fa-sun text-lg text-amber-500"></i>'
+                        : '<i class="fa-solid fa-moon text-lg text-yellow-400"></i>';
+                });
+
+                // Settings Modal
+                this.dom.settingsBtn.addEventListener('click', () => {
+                    this.dom.settingsModal.classList.remove('hidden');
+                });
+                this.dom.closeSettings.addEventListener('click', () => {
+                    this.dom.settingsModal.classList.add('hidden');
+                });
+                this.dom.saveSettingsBtn.addEventListener('click', () => {
+                    this.stageHeight = parseInt(this.dom.stageHeightSlider.value, 10);
+                    this.barMaxWidth = parseInt(this.dom.barWidthSlider.value, 10);
+                    this.trajectoryMode = this.dom.trajectoryMode.value;
+                    this.liftHeight = parseInt(this.dom.liftHeightSlider.value, 10);
+                    this.showArrows = this.dom.toggleArrows.checked;
+                    this.easing = this.dom.easingSelect.value;
+                    synthesizer.enabled = this.dom.toggleSound.checked;
+                    synthesizer.volume = parseFloat(this.dom.volumeSlider.value);
+                    
+                    this.dom.visualizerStage.style.height = `${this.stageHeight}px`;
+                    this.dom.settingsModal.classList.add('hidden');
+                    this.renderCurrentStep();
+                });
+
+                this.dom.stageHeightSlider.addEventListener('input', (e) => {
+                    this.dom.stageHeightVal.innerText = `${e.target.value}px`;
+                });
+                this.dom.barWidthSlider.addEventListener('input', (e) => {
+                    this.dom.barWidthVal.innerText = `${e.target.value}px`;
+                });
+                this.dom.liftHeightSlider.addEventListener('input', (e) => {
+                    this.dom.liftHeightVal.innerText = `${e.target.value}px`;
+                });
+                this.dom.volumeSlider.addEventListener('input', (e) => {
+                    this.dom.volumeVal.innerText = `${Math.round(e.target.value * 100)}%`;
+                });
+            }
+
+            generateArrayData() {
+                this.pause();
+                const n = this.arraySize;
+                let data = [];
+
+                if (this.presetType === 'random') {
+                    for (let i = 0; i < n; i++) data.push(Math.floor(Math.random() * 85) + 10);
+                } else if (this.presetType === 'reversed') {
+                    for (let i = 0; i < n; i++) data.push(Math.round(95 - (i / n) * 80));
+                } else if (this.presetType === 'nearlySorted') {
+                    for (let i = 0; i < n; i++) data.push(15 + i * 5);
+                    if (n > 4) { let t = data[2]; data[2] = data[3]; data[3] = t; }
+                } else if (this.presetType === 'fewUnique') {
+                    const sample = [20, 45, 70, 90];
+                    for (let i = 0; i < n; i++) data.push(sample[Math.floor(Math.random() * sample.length)]);
+                }
+
+                if (this.currentAlgorithm === 'binarySearch') {
+                    data.sort((a, b) => this.sortOrder === 'desc' ? b - a : a - b);
+                }
+
+                this.arrayData = data;
+            }
+
+            updateAlgorithmInfo() {
+                const comp = ALGO_COMPLEXITY[this.currentAlgorithm] || { best: '-', avg: '-', space: '-' };
+                this.dom.compBest.innerText = comp.best;
+                this.dom.compAvg.innerText = comp.avg;
+                this.dom.compSpace.innerText = comp.space;
+                this.renderCodePanel();
+            }
+
+            rebuildSteps() {
+                this.steps = StepGenerator.generate(this.currentAlgorithm, this.arrayData, this.searchTarget, this.sortOrder);
+                this.currentStepIdx = 0;
+                this.dom.totalStepNum.innerText = this.steps.length - 1;
+                this.renderCurrentStep();
+            }
+
+            play() {
+                if (this.currentStepIdx >= this.steps.length - 1) {
+                    this.currentStepIdx = 0;
+                }
+                this.isPlaying = true;
+                this.dom.playText.innerText = 'Tạm dừng';
+                this.dom.playIcon.className = 'fa-solid fa-pause';
+
+                const interval = 1000 / (1.2 * this.playbackSpeed);
+                this.timer = setInterval(() => {
+                    if (this.currentStepIdx < this.steps.length - 1) {
+                        this.currentStepIdx++;
+                        this.renderCurrentStep();
+                    } else {
+                        this.pause();
+                    }
+                }, interval);
+            }
+
+            pause() {
+                this.isPlaying = false;
+                this.dom.playText.innerText = 'Phát';
+                this.dom.playIcon.className = 'fa-solid fa-play';
+                if (this.timer) {
+                    clearInterval(this.timer);
+                    this.timer = null;
+                }
+            }
+
+            renderCurrentStep() {
+                if (!this.steps || this.steps.length === 0) return;
+                const step = this.steps[this.currentStepIdx];
+
+                this.dom.currentStepNum.innerText = this.currentStepIdx;
+                this.dom.stepExplanation.innerText = step.explanation;
+
+                this.renderArrayNodes(step);
+                this.highlightCodeLine(step.codeLine);
+                this.renderVariableTracker(step.vars);
+                this.renderPointerBadges(step.pointers);
+
+                if (step.highlights) {
+                    const activeValKey = Object.keys(step.highlights)[0];
+                    if (activeValKey !== undefined && step.array[activeValKey] !== undefined) {
+                        synthesizer.playTone(step.array[activeValKey]);
+                    }
+                }
+
+                this.renderTrajectoryVector(step.trajectory);
+            }
+
+            renderArrayNodes(step) {
+                const container = this.dom.arrayContainer;
+                container.innerHTML = '';
+
+                const maxVal = Math.max(...step.array, 100);
+
+                step.array.forEach((val, idx) => {
+                    const wrapper = document.createElement('div');
+                    wrapper.className = 'relative flex flex-col items-center justify-end h-full flex-1';
+                    wrapper.style.maxWidth = `${this.barMaxWidth}px`;
+
+                    const ghost = document.createElement('div');
+                    ghost.className = 'ghost-slot absolute bottom-0 w-full rounded-xl text-[10px] text-center font-mono text-slate-500 flex items-end justify-center pb-1';
+                    ghost.style.height = `${(val / maxVal) * 80 + 15}%`;
+                    ghost.innerText = idx;
+                    wrapper.appendChild(ghost);
+
+                    const node = document.createElement('div');
+                    node.id = `node-${idx}`;
+                    node.className = `array-node absolute bottom-0 w-full rounded-2xl flex flex-col justify-between items-center py-2 text-xs font-bold font-mono transition-all`;
+                    node.style.height = `${(val / maxVal) * 80 + 15}%`;
+                    node.style.transitionTimingFunction = this.easing;
+
+                    const state = step.highlights ? step.highlights[idx] : null;
+                    if (state === 'comparing') {
+                        node.className += ' bg-amber-400 text-slate-950 border-2 border-amber-300 shadow-lg shadow-amber-400/40';
+                    } else if (state === 'swapping') {
+                        node.className += ' bg-pink-500 text-white border-2 border-pink-300 glow-neon-pink drop-ripple';
+                    } else if (state === 'key') {
+                        node.className += ' bg-yellow-400 text-slate-950 border-2 border-yellow-200 glow-neon-yellow';
+                    } else if (state === 'sorted') {
+                        node.className += ' bg-emerald-400 text-slate-950 border-2 border-emerald-200 glow-neon-green';
+                    } else if (state === 'excluded') {
+                        node.className += ' bg-slate-800/30 text-slate-600 border border-slate-700/30 opacity-30';
+                    } else if (state === 'active') {
+                        node.className += ' bg-cyan-400 text-slate-950 border-2 border-cyan-200 glow-neon-blue';
+                    } else {
+                        node.className += ' bg-gradient-to-t from-blue-600 via-cyan-500 to-cyan-400 text-slate-950 border border-cyan-300/40 shadow-md';
+                    }
+
+                    const valTag = document.createElement('span');
+                    valTag.className = 'text-[11px] font-bold drop-shadow';
+                    valTag.innerText = val;
+
+                    const idxTag = document.createElement('span');
+                    idxTag.className = 'text-[9px] opacity-80';
+                    idxTag.innerText = idx;
+
+                    node.appendChild(valTag);
+                    node.appendChild(idxTag);
+
+                    if (step.trajectory && (step.trajectory.fromIdx === idx || step.trajectory.toIdx === idx)) {
+                        node.classList.add('lifting');
+                        if (this.trajectoryMode === 'arc') {
+                            node.style.transform = `translateY(-${this.liftHeight}px) scale(1.08)`;
+                        } else {
+                            node.style.transform = `translateY(-${this.liftHeight * 0.75}px)`;
+                        }
+                    }
+
+                    wrapper.appendChild(node);
+                    container.appendChild(wrapper);
+                });
+            }
+
+            renderTrajectoryVector(trajectory) {
+                const path = this.dom.trajectoryPath;
+                if (!trajectory || !this.showArrows) {
+                    path.setAttribute('d', '');
+                    return;
+                }
+
+                const fromNode = document.getElementById(`node-${trajectory.fromIdx}`);
+                const toNode = document.getElementById(`node-${trajectory.toIdx}`);
+
+                if (!fromNode || !toNode) {
+                    path.setAttribute('d', '');
+                    return;
+                }
+
+                const stageRect = this.dom.svgLayer.getBoundingClientRect();
+                const r1 = fromNode.getBoundingClientRect();
+                const r2 = toNode.getBoundingClientRect();
+
+                const x1 = r1.left + r1.width / 2 - stageRect.left;
+                const y1 = r1.top - stageRect.top;
+                const x2 = r2.left + r2.width / 2 - stageRect.left;
+                const y2 = r2.top - stageRect.top;
+
+                let d = '';
+                if (this.trajectoryMode === 'arc') {
+                    const controlY = Math.min(y1, y2) - this.liftHeight - 20;
+                    d = `M ${x1} ${y1} C ${x1} ${controlY}, ${x2} ${controlY}, ${x2} ${y2}`;
+                } else {
+                    const midY = Math.min(y1, y2) - (this.liftHeight * 0.7);
+                    d = `M ${x1} ${y1} L ${x1} ${midY} L ${x2} ${midY} L ${x2} ${y2}`;
+                }
+
+                path.setAttribute('d', d);
+            }
+
+            renderCodePanel() {
+                const lines = (CODE_DATABASE[this.currentAlgorithm] && CODE_DATABASE[this.currentAlgorithm][this.currentLanguage]) || [];
+                const container = this.dom.codeContainer;
+                container.innerHTML = '';
+
+                lines.forEach((codeText, lineIdx) => {
+                    const lineDiv = document.createElement('div');
+                    lineDiv.id = `code-line-${lineIdx + 1}`;
+                    lineDiv.className = 'code-line px-2 py-0.5 rounded flex items-center gap-3 font-mono';
+
+                    const lineNum = document.createElement('span');
+                    lineNum.className = 'text-slate-600 select-none w-6 text-right text-[10px] font-mono';
+                    lineNum.innerText = lineIdx + 1;
+
+                    const codeContent = document.createElement('span');
+                    codeContent.className = 'code-text text-slate-200';
+                    codeContent.textContent = codeText; // Preserves exact spaces/indentation
+
+                    lineDiv.appendChild(lineNum);
+                    lineDiv.appendChild(codeContent);
+                    container.appendChild(lineDiv);
+                });
+            }
+
+            highlightCodeLine(lineNum) {
+                document.querySelectorAll('.code-line').forEach(el => el.classList.remove('active-line'));
+                const activeEl = document.getElementById(`code-line-${lineNum}`);
+                if (activeEl) {
+                    activeEl.classList.add('active-line');
+                    activeEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                }
+            }
+
+            renderVariableTracker(vars) {
+                const container = this.dom.variableTracker;
+                container.innerHTML = '';
+
+                if (!vars || Object.keys(vars).length === 0) {
+                    container.innerHTML = `<span class="text-xs text-slate-500 italic col-span-3">Không có biến hoạt động</span>`;
+                    return;
+                }
+
+                Object.entries(vars).forEach(([key, value]) => {
+                    const chip = document.createElement('div');
+                    chip.className = 'bg-slate-900/80 light:bg-white p-2 rounded-2xl border border-white/10 light:border-slate-300 flex flex-col items-center justify-center';
+
+                    const label = document.createElement('span');
+                    label.className = 'text-[10px] text-slate-400 font-mono uppercase';
+                    label.innerText = key;
+
+                    const val = document.createElement('span');
+                    val.className = 'text-xs font-bold font-mono text-cyan-400';
+                    val.innerText = value;
+
+                    chip.appendChild(label);
+                    chip.appendChild(val);
+                    container.appendChild(chip);
+                });
+            }
+
+            renderPointerBadges(pointers) {
+                const container = this.dom.pointerBadges;
+                container.innerHTML = `<span class="text-slate-400 italic me-1">Con trỏ:</span>`;
+
+                if (!pointers || Object.keys(pointers).length === 0) {
+                    container.innerHTML += `<span class="text-slate-500 text-xs">Không có</span>`;
+                    return;
+                }
+
+                Object.entries(pointers).forEach(([pName, pVal]) => {
+                    const badge = document.createElement('span');
+                    badge.className = 'px-2.5 py-1 rounded-xl bg-cyan-500/10 text-cyan-400 border border-cyan-500/30 font-mono font-bold text-xs';
+                    badge.innerText = `${pName} = ${pVal}`;
+                    container.appendChild(badge);
+                });
+            }
+        }
+
+        window.addEventListener('load', () => {
+            const app = new ApplicationState();
+            app.init();
+        });
+    </script>
+</body>
+</html>
